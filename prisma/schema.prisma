@@ -12,3 +12,116 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  email    String  @unique
+  password String?
+
+  name    String   @default("Не указано")
+  picture String   @default("/uploads/no-user-image.png")
+  role    UserRole @default(USER)
+
+  favorites Novel[]
+  reviews   Review[]
+
+  @@map("user")
+}
+
+model Novel {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title       String
+  description String
+  images      String[]
+  reviewCount Int      @default(0) @map("review_count")
+
+  reviews  Review[]
+  chapters Chapter[]
+  tags     Tag[]     @relation("NovelTags")
+
+  category   Category?  @relation(fields: [categoryId], references: [id])
+  categoryId String?    @map("category_id")
+  user       User?      @relation(fields: [userId], references: [id])
+  userId     String?    @map("user_id")
+  NovelTag   NovelTag[]
+
+  @@index([title]) // Index for fast searching by title
+  @@map("novel")
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title   String
+  content String
+  number  Int
+
+  Novel   Novel?  @relation(fields: [novelId], references: [id])
+  novelId String? @map("novel_id")
+
+  @@map("chapter")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title       String
+  description String
+
+  novels Novel[]
+
+  @@map("category")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  text String
+
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String? @map("user_id")
+  novel   Novel?  @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  novelId String? @map("novel_id")
+
+  @@map("review")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  name     String     @unique
+  novels   Novel[]    @relation("NovelTags")
+  NovelTag NovelTag[]
+
+  @@map("tag")
+}
+
+model NovelTag {
+  novel   Novel  @relation(fields: [novelId], references: [id])
+  novelId String @map("novel_id")
+
+  tag   Tag    @relation(fields: [tagId], references: [id])
+  tagId String @map("tag_id")
+
+  @@id([novelId, tagId]) // Composite key to ensure unique tag-product pairs
+  @@map("product_tag")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
